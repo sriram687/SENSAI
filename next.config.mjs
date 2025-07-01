@@ -1,4 +1,10 @@
 import path from "path";
+import { fileURLToPath } from "url";
+import { dirname } from "path";
+
+// ✅ Manually define __dirname for ESM
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -10,11 +16,8 @@ const nextConfig = {
       },
     ],
   },
-  experimental: {
-    appDir: true, // ✅ Keep this only if you're using the App Router (i.e., /app folder)
-  },
   webpack: (config) => {
-    config.resolve.alias['@'] = path.resolve(__dirname, 'src'); // ✅ Fix alias
+    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
     return config;
   },
 };
