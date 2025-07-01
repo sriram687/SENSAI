@@ -10,18 +10,12 @@ const nextConfig = {
       },
     ],
   },
-  turbo: {
-    loaders: {
-      font: [
-        {
-          loader: "@next/font/google",
-          options: { subsets: ["latin"] },
-        },
-      ],
-    },
-  },
   experimental: {
-    appDir: true,
+    appDir: true, // ✅ Keep this only if you're using the App Router (i.e., /app folder)
+  },
+  webpack: (config) => {
+    config.resolve.alias['@'] = path.resolve(__dirname, 'src'); // ✅ Fix alias
+    return config;
   },
 };
 
