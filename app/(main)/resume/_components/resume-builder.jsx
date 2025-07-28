@@ -116,65 +116,97 @@ export default function ResumeBuilder({ initialContent }) {
   const generatePDF = async () => {
     setIsGenerating(true);
     try {
-      // Create a temporary container for the PDF content
-      const container = document.createElement('div');
-      container.style.position = 'fixed';
-      container.style.left = '-9999px';
-      container.style.top = '-9999px';
-      container.style.width = '210mm'; // A4 width
-      container.style.padding = '20mm';
-      container.style.backgroundColor = 'white';
-      container.style.color = 'black';
-      container.style.fontFamily = 'Arial, Helvetica, sans-serif';
-      document.body.appendChild(container);
+      // Dynamically import jsPDF to avoid SSR issues
+      const { default: jsPDF } = await import('jspdf');
 
-      // Convert markdown to HTML
+      // Create a new PDF document
+      const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4'
+      });
+
+      // Set up document properties
+      const margin = 20;
+      const pageWidth = 210;
+      const pageHeight = 297;
+      const textWidth = pageWidth - (margin * 2);
+      let y = margin;
+
+      // Convert markdown to plain text for PDF
       const markdownIt = await import('markdown-it');
       const md = new markdownIt.default();
       const htmlContent = md.render(previewContent);
 
-      // Add CSS for proper styling
-      const styleElement = document.createElement('style');
-      styleElement.textContent = `
-        h1 { font-size: 24px; margin-bottom: 10px; color: black; }
-        h2 { font-size: 20px; margin-bottom: 8px; margin-top: 16px; color: black; }
-        h3 { font-size: 16px; margin-bottom: 6px; margin-top: 12px; color: black; }
-        p { font-size: 12px; margin-bottom: 6px; line-height: 1.5; color: black; }
-        ul { margin-left: 20px; }
-        li { font-size: 12px; margin-bottom: 4px; color: black; }
-      `;
+      // Simple HTML to text conversion
+      const tempDiv = document.createElement('div');
+      tempDiv.innerHTML = htmlContent;
+      const textContent = tempDiv.textContent || tempDiv.innerText || '';
 
-      // Set the HTML content
-      container.innerHTML = `
-        <div class="resume-content">
-          ${styleElement.outerHTML}
-          ${htmlContent}
-        </div>
-      `;
+      // Split content into lines
+      const lines = textContent.split('\n').filter(line => line.trim() !== '');
 
-      // Dynamically import html2pdf
-      const html2pdfModule = await import('html2pdf.js');
-      const html2pdf = html2pdfModule.default;
+      // Set font
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(12);
 
-      // Configure html2pdf options
-      const opt = {
-        margin: 10,
-        filename: 'resume.pdf',
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: {
-          scale: 2,
-          useCORS: true,
-          letterRendering: true,
-          backgroundColor: '#ffffff'
-        },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-      };
+      // Process each line
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
 
-      // Generate and save the PDF
-      await html2pdf().from(container).set(opt).save();
+        if (line) {
+          // Check if it's a heading (starts with #)
+          if (line.startsWith('#')) {
+            const headingLevel = (line.match(/^#+/) || [''])[0].length;
+            const headingText = line.replace(/^#+\s*/, '');
 
-      // Clean up
-      document.body.removeChild(container);
+            // Set heading style
+            if (headingLevel === 1) {
+              doc.setFontSize(18);
+              doc.setFont('helvetica', 'bold');
+            } else if (headingLevel === 2) {
+              doc.setFontSize(16);
+              doc.setFont('helvetica', 'bold');
+            } else {
+              doc.setFontSize(14);
+              doc.setFont('helvetica', 'bold');
+            }
+
+            // Add some space before heading
+            if (y > margin + 10) y += 5;
+
+            // Handle text wrapping for headings
+            const headingLines = doc.splitTextToSize(headingText, textWidth);
+            doc.text(headingLines, margin, y);
+            y += 7 * headingLines.length;
+
+            // Reset to normal text
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+          } else {
+            // Regular text
+            doc.setFontSize(12);
+            doc.setFont('helvetica', 'normal');
+
+            // Handle text wrapping
+            const textLines = doc.splitTextToSize(line, textWidth);
+            doc.text(textLines, margin, y);
+            y += 6 * textLines.length;
+          }
+        } else {
+          // Empty line
+          y += 4;
+        }
+
+        // Check if we need a new page
+        if (y > pageHeight - 30) {
+          doc.addPage();
+          y = margin;
+        }
+      }
+
+      // Save the PDF
+      doc.save('resume.pdf');
 
       toast.success("PDF generated successfully!");
     } catch (error) {

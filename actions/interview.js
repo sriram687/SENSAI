@@ -9,18 +9,24 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function generateQuiz() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-    select: {
-      industry: true,
-      skills: true,
-    },
-  });
+    // Check if database is available
+    if (!db) {
+      throw new Error("Database not available");
+    }
 
-  if (!user) throw new Error("User not found");
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+      select: {
+        industry: true,
+        skills: true,
+      },
+    });
+
+    if (!user) throw new Error("User not found");
 
   const prompt = `
     Generate 10 technical interview questions for a ${
@@ -56,17 +62,27 @@ export async function generateQuiz() {
     console.error("Error generating quiz:", error);
     throw new Error("Failed to generate quiz questions");
   }
+  } catch (error) {
+    console.error("Error in generateQuiz:", error);
+    throw new Error("Failed to generate quiz: " + error.message);
+  }
 }
 
 export async function saveQuizResult(questions, answers, score) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+    // Check if database is available
+    if (!db) {
+      throw new Error("Database not available");
+    }
 
-  if (!user) throw new Error("User not found");
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (!user) throw new Error("User not found");
 
   const questionResults = questions.map((q, index) => ({
     question: q.question,
@@ -127,19 +143,35 @@ export async function saveQuizResult(questions, answers, score) {
     console.error("Error saving quiz result:", error);
     throw new Error("Failed to save quiz result");
   }
+  } catch (error) {
+    console.error("Error in saveQuizResult:", error);
+    throw new Error("Failed to save quiz result: " + error.message);
+  }
 }
 
 export async function getAssessments() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
-
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
-
-  if (!user) throw new Error("User not found");
-
   try {
+    const { userId } = await auth();
+    if (!userId) {
+      console.log("No user ID found");
+      return [];
+    }
+
+    // Check if database is available
+    if (!db) {
+      console.warn('Database not available, returning empty array');
+      return [];
+    }
+
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (!user) {
+      console.log("User not found in database");
+      return [];
+    }
+
     const assessments = await db.assessment.findMany({
       where: {
         userId: user.id,
@@ -149,9 +181,9 @@ export async function getAssessments() {
       },
     });
 
-    return assessments;
+    return assessments || [];
   } catch (error) {
     console.error("Error fetching assessments:", error);
-    throw new Error("Failed to fetch assessments");
+    return [];
   }
 }

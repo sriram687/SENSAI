@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF Download Test</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+</head>
+<body>
+    <h1>PDF Download Test</h1>
+    
+    <h2>Test Resume PDF (jsPDF approach)</h2>
+    <button onclick="testResumePDF()">Test Resume PDF Download</button>
+    
+    <h2>Test Cover Letter PDF (jsPDF approach)</h2>
+    <button onclick="testCoverLetterPDF()">Test Cover Letter PDF Download</button>
+    
+    <script>
+        function testResumePDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                // Test content
+                const content = `# John Doe
+## Software Engineer
+
+### Contact Information
+- Email: john.doe@email.com
+- Phone: (555) 123-4567
+- LinkedIn: linkedin.com/in/johndoe
+
+### Professional Summary
+Experienced software engineer with 5+ years of experience in full-stack development.
+
+### Skills
+- JavaScript, React, Node.js
+- Python, Django
+- SQL, MongoDB
+- AWS, Docker
+
+### Experience
+#### Senior Software Engineer | Tech Company (2020-Present)
+- Developed and maintained web applications
+- Led a team of 3 developers
+- Improved application performance by 40%
+
+#### Software Engineer | Startup Inc (2018-2020)
+- Built RESTful APIs
+- Implemented CI/CD pipelines
+- Collaborated with cross-functional teams`;
+
+                // Set up document properties
+                const margin = 20;
+                const pageWidth = 210;
+                const pageHeight = 297;
+                const textWidth = pageWidth - (margin * 2);
+                let y = margin;
+
+                // Split content into lines
+                const lines = content.split('\n').filter(line => line.trim() !== '');
+
+                // Set font
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(12);
+
+                // Process each line
+                for (let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim();
+                    
+                    if (line) {
+                        // Check if it's a heading (starts with #)
+                        if (line.startsWith('#')) {
+                            const headingLevel = (line.match(/^#+/) || [''])[0].length;
+                            const headingText = line.replace(/^#+\s*/, '');
+                            
+                            // Set heading style
+                            if (headingLevel === 1) {
+                                doc.setFontSize(18);
+                                doc.setFont('helvetica', 'bold');
+                            } else if (headingLevel === 2) {
+                                doc.setFontSize(16);
+                                doc.setFont('helvetica', 'bold');
+                            } else {
+                                doc.setFontSize(14);
+                                doc.setFont('helvetica', 'bold');
+                            }
+                            
+                            // Add some space before heading
+                            if (y > margin + 10) y += 5;
+                            
+                            // Handle text wrapping for headings
+                            const headingLines = doc.splitTextToSize(headingText, textWidth);
+                            doc.text(headingLines, margin, y);
+                            y += 7 * headingLines.length;
+                            
+                            // Reset to normal text
+                            doc.setFontSize(12);
+                            doc.setFont('helvetica', 'normal');
+                        } else {
+                            // Regular text
+                            doc.setFontSize(12);
+                            doc.setFont('helvetica', 'normal');
+                            
+                            // Handle text wrapping
+                            const textLines = doc.splitTextToSize(line, textWidth);
+                            doc.text(textLines, margin, y);
+                            y += 6 * textLines.length;
+                        }
+                    } else {
+                        // Empty line
+                        y += 4;
+                    }
+
+                    // Check if we need a new page
+                    if (y > pageHeight - 30) {
+                        doc.addPage();
+                        y = margin;
+                    }
+                }
+
+                // Save the PDF
+                doc.save('test-resume.pdf');
+                alert('Resume PDF generated successfully!');
+            } catch (error) {
+                console.error('Resume PDF generation error:', error);
+                alert('Failed to generate resume PDF: ' + error.message);
+            }
+        }
+
+        function testCoverLetterPDF() {
+            try {
+                const { jsPDF } = window.jspdf;
+                const doc = new jsPDF({
+                    orientation: 'portrait',
+                    unit: 'mm',
+                    format: 'a4'
+                });
+
+                const content = `Dear Hiring Manager,
+
+I am writing to express my strong interest in the Software Engineer position at your company. With over 5 years of experience in full-stack development, I am confident that I would be a valuable addition to your team.
+
+In my current role as Senior Software Engineer at Tech Company, I have successfully:
+- Led the development of multiple web applications using React and Node.js
+- Improved application performance by 40% through code optimization
+- Mentored junior developers and contributed to team growth
+
+My technical skills include JavaScript, Python, React, Node.js, and cloud technologies like AWS. I am passionate about writing clean, efficient code and staying up-to-date with the latest industry trends.
+
+I would welcome the opportunity to discuss how my experience and enthusiasm can contribute to your team's success. Thank you for considering my application.
+
+Sincerely,
+John Doe`;
+
+                // Set up document properties
+                const margin = 20;
+                const pageWidth = 210;
+                const textWidth = pageWidth - (margin * 2);
+                let y = margin;
+
+                // Set font
+                doc.setFont('helvetica', 'normal');
+                doc.setFontSize(12);
+
+                // Split content into paragraphs
+                const paragraphs = content.split('\n\n');
+
+                for (let i = 0; i < paragraphs.length; i++) {
+                    const paragraph = paragraphs[i].trim();
+                    
+                    if (paragraph) {
+                        // Handle text wrapping
+                        const textLines = doc.splitTextToSize(paragraph, textWidth);
+                        doc.text(textLines, margin, y);
+                        y += 6 * textLines.length;
+                        
+                        // Add space between paragraphs
+                        y += 4;
+                    }
+
+                    // Check if we need a new page
+                    if (y > 280) {
+                        doc.addPage();
+                        y = 20;
+                    }
+                }
+
+                // Save the PDF
+                doc.save('test-cover-letter.pdf');
+                alert('Cover Letter PDF generated successfully!');
+            } catch (error) {
+                console.error('Cover Letter PDF generation error:', error);
+                alert('Failed to generate cover letter PDF: ' + error.message);
+            }
+        }
+    </script>
+</body>
+</html>

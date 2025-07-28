@@ -14,12 +14,25 @@ const nextConfig = {
         protocol: "https",
         hostname: "randomuser.me",
       },
+      {
+        protocol: "https",
+        hostname: "img.clerk.com",
+      },
     ],
   },
   webpack: (config) => {
-    config.resolve.alias['@'] = path.resolve(__dirname, 'src');
+    config.resolve.alias['@'] = path.resolve(__dirname, '.');
     return config;
   },
+  // Turbopack configuration (when using --turbopack flag)
+  turbopack: {
+    resolveAlias: {
+      '@': '.',
+      '@/*': './*',
+    },
+  },
+  // External packages for server components
+  serverExternalPackages: ['@prisma/client'],
 };
 
 export default nextConfig;

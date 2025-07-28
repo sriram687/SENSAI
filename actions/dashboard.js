@@ -56,30 +56,59 @@ export const generateAIInsights = async (industry) => {
 export async function getIndustryInsights() {
     const { userId } = await auth();
     if (!userId) throw new Error("Unauthorized");
-    const user = await db.user.findUnique({
-        where: {
-            clerkUserId: userId,
-        },
-        include:{
-            industryInsight : true,
-        }
-    });
 
-    if (!user) throw new Error("User not found");
-
-
-    if (!user.industryInsight) {
-        const insights = await generateAIInsights(user.industry);
-
-        const industryInsight = await db.industryInsight.create({
-
-            data: {
-                industry: user.industry,
-                ...insights,
-                nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
-            },
-        });
-        return industryInsight;
+    // Check if database is available
+    if (!db) {
+        console.warn('Database not available, returning mock industry insights');
+        return {
+            industry: "general",
+            salaryRanges: [],
+            growthRate: 0,
+            demandLevel: "MEDIUM",
+            topSkills: [],
+            marketOutlook: "NEUTRAL",
+            keyTrends: [],
+            recommendedSkills: [],
+            lastUpdated: new Date(),
+            nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
+        };
     }
-    return user.industryInsight;
+
+    try {
+        const user = await db.user.findUnique({
+            where: {
+                clerkUserId: userId,
+            },
+            include:{
+                industryInsight : true,
+            }
+        });
+
+        if (!user) throw new Error("User not found");
+
+        // If user doesn't have an industry set, return null
+        if (!user.industry) {
+            console.log("User has no industry set, cannot get insights");
+            return null;
+        }
+
+        if (!user.industryInsight) {
+            console.log(`Creating industry insights for user industry: ${user.industry}`);
+            const insights = await generateAIInsights(user.industry);
+
+            const industryInsight = await db.industryInsight.create({
+                data: {
+                    industry: user.industry,
+                    ...insights,
+                    nextUpdate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+                },
+            });
+            console.log(`Industry insights created successfully for: ${user.industry}`);
+            return industryInsight;
+        }
+        return user.industryInsight;
+    } catch (error) {
+        console.error("Error getting industry insights:", error.message);
+        throw new Error("Failed to get industry insights: " + error.message);
+    }
 }

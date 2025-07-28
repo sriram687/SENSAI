@@ -9,14 +9,20 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
 export async function saveResume(content) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+    // Check if database is available
+    if (!db) {
+      throw new Error("Database not available");
+    }
 
-  if (!user) throw new Error("User not found");
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
+
+    if (!user) throw new Error("User not found");
 
   try {
     const resume = await db.resume.upsert({
@@ -38,37 +44,64 @@ export async function saveResume(content) {
     console.error("Error saving resume:", error);
     throw new Error("Failed to save resume");
   }
+  } catch (error) {
+    console.error("Error in saveResume:", error);
+    throw new Error("Failed to save resume: " + error.message);
+  }
 }
 
 export async function getResume() {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const { userId } = await auth();
+    if (!userId) {
+      console.log("No user ID found");
+      return null;
+    }
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-  });
+    // Check if database is available
+    if (!db) {
+      console.warn('Database not available, returning null');
+      return null;
+    }
 
-  if (!user) throw new Error("User not found");
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+    });
 
-  return await db.resume.findUnique({
-    where: {
-      userId: user.id,
-    },
-  });
+    if (!user) {
+      console.log("User not found in database");
+      return null;
+    }
+
+    return await db.resume.findUnique({
+      where: {
+        userId: user.id,
+      },
+    });
+  } catch (error) {
+    console.error("Error fetching resume:", error);
+    return null;
+  }
 }
 
 export async function improveWithAI({ current, type }) {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Unauthorized");
+  try {
+    const { userId } = await auth();
+    if (!userId) throw new Error("Unauthorized");
 
-  const user = await db.user.findUnique({
-    where: { clerkUserId: userId },
-    include: {
-      industryInsight: true,
-    },
-  });
+    // Check if database is available
+    if (!db) {
+      throw new Error("Database not available");
+    }
 
-  if (!user) throw new Error("User not found");
+    const user = await db.user.findUnique({
+      where: { clerkUserId: userId },
+      include: {
+        industryInsight: true,
+      },
+    });
+
+    if (!user) throw new Error("User not found");
 
   const prompt = `
     As an expert resume writer, improve the following ${type} description for a ${user.industry} professional.
@@ -94,5 +127,9 @@ export async function improveWithAI({ current, type }) {
   } catch (error) {
     console.error("Error improving content:", error);
     throw new Error("Failed to improve content");
+  }
+  } catch (error) {
+    console.error("Error in improveWithAI:", error);
+    throw new Error("Failed to improve content: " + error.message);
   }
 }
