@@ -11,7 +11,7 @@ async function testDatabaseConnection() {
     console.log('✅ Database connection successful!');
     
     // Test a simple query
-    const result = await prisma.$queryRaw`SELECT 1 as test`;
+    const result = await prisma.$runCommandRaw({ ping: 1 });
     console.log('✅ Database query test successful:', result);
     
     // Check if tables exist

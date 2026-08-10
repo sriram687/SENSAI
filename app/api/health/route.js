@@ -17,7 +17,7 @@ export async function GET() {
     await db.$connect();
     
     // Simple query to test connection
-    const result = await db.$queryRaw`SELECT 1 as test`;
+    const result = await db.$runCommandRaw({ ping: 1 });
     
     return NextResponse.json({
       status: 'healthy',

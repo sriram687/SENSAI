@@ -149,7 +149,7 @@ export default function Quiz() {
           </div>
         )}
       </CardContent>
-      <CardFooter className="flex justify-between">
+      <CardFooter className="flex justify-start gap-2">
         {!showExplanation && (
           <Button
             onClick={() => setShowExplanation(true)}
@@ -162,7 +162,6 @@ export default function Quiz() {
         <Button
           onClick={handleNext}
           disabled={!answers[currentQuestion] || savingResult}
-          className="ml-auto"
         >
           {savingResult && (
             <PacmanLoader className="mt-4" width={"100%"} color="gray" />

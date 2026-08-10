@@ -3,10 +3,7 @@
 
 import { db } from "../lib/inngest/prisma";
 import { auth } from "@clerk/nextjs/server";
-import { GoogleGenerativeAI } from "@google/generative-ai";
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+import { generateWithFallback } from "../lib/gemini-client";
 
 export async function generateQuiz() {
   try {
@@ -51,9 +48,7 @@ export async function generateQuiz() {
   `;
 
   try {
-    const result = await model.generateContent(prompt);
-    const response = result.response;
-    const text = response.text();
+    const text = await generateWithFallback(prompt);
     const cleanedText = text.replace(/```(?:json)?\n?/g, "").trim();
     const quiz = JSON.parse(cleanedText);
 
@@ -117,9 +112,9 @@ export async function saveQuizResult(questions, answers, score) {
     `;
 
     try {
-      const tipResult = await model.generateContent(improvementPrompt);
+      const tipResult = await generateWithFallback(improvementPrompt);
 
-      improvementTip = tipResult.response.text().trim();
+      improvementTip = tipResult.trim();
       console.log(improvementTip);
     } catch (error) {
       console.error("Error generating improvement tip:", error);
